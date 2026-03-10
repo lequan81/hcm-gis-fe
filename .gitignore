@@ -1,0 +1,14 @@
+node_modules/
+dist/
+
+# Bun
+bun.lock
+
+# vue-tsc -b emit artifacts
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+src/**/*.vue.js
+src/**/*.js
+!src/**/*.config.js
+.env

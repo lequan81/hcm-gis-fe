@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0c0f1a" />
+  <title>HCMC 3D Building Tiles</title>
+  <meta name="description"
+    content="Download MVT building tiles from Ho Chi Minh City 3D map server into MBTiles format" />
+
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="HCMC 3D Building Tiles" />
+  <meta property="og:description"
+    content="Download MVT building tiles from Ho Chi Minh City 3D map server into MBTiles format" />
+  <meta property="og:image" content="/pwa-512x512.png" />
+  <meta property="og:url" content="https://chungbd.github.io/hcm-gis-3d" />
+  <meta property="og:site_name" content="HCMC 3D Building Tiles" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="HCMC 3D Building Tiles" />
+  <meta name="twitter:description"
+    content="Download MVT building tiles from Ho Chi Minh City 3D map server into MBTiles format" />
+  <meta name="twitter:image" content="/pwa-512x512.png" />
+
+  <!-- PWA -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="HCMC Tiles" />
+
+  <!-- Font: Be Vietnam Pro (preloaded) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <style>
+    #app-loader {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      height: 100vh;
+      background: #0c0f1a;
+      color: #94a3b8;
+      font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+      gap: 12px
+    }
+
+    #app-loader .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #1e293b;
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin .7s linear infinite
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-bg-deep text-text-primary font-sans min-h-screen antialiased">
+  <div id="app">
+    <!-- Initial loading splash — removed once Vue mounts -->
+    <div id="app-loader">
+      <div class="spinner"></div>
+      <span style="font-size:14px">Loading...</span>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>
