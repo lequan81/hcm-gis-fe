@@ -41,7 +41,7 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         runtimeCaching: [
           {
-            urlPattern: /^\/api\//,
+            urlPattern: /^\/hcm-gis\/api\//,
             handler: "NetworkOnly",
           },
         ],
@@ -50,7 +50,10 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      "/api": "http://localhost:3001",
+      "/hcm-gis/api": {
+        target: "http://localhost:3001",
+        rewrite: (path: string) => path.replace(/^\/hcm-gis/, ""),
+      },
     },
   },
 });

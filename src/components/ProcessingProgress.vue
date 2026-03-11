@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { useDownloadStore } from "../stores/download";
+import { useProcessingStore } from "../stores/processing";
 import { useI18n } from "../i18n";
-const store = useDownloadStore();
+const store = useProcessingStore();
 const i18n = useI18n();
-const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+const apiBase = import.meta.env.VITE_API_BASE_URL || "/hcm-gis";
 
 function onCancel() {
   try {
@@ -38,7 +38,7 @@ const zipUrl = computed(() => {
           store.progressLabel
         }}</span>
         <div class="flex items-center gap-3">
-          <span class="text-sm font-mono text-accent-teal"
+          <span class="text-sm text-accent-teal tabular-nums font-semibold"
             >{{ store.progressPct }}%</span
           >
           <button
@@ -46,7 +46,11 @@ const zipUrl = computed(() => {
             @click="onCancel"
             class="text-xs text-text-secondary hover:text-red-400 border border-border-default px-2 py-1 rounded transition-colors"
           >
-            Cancel
+            {{
+              store.selected.size > 1 || store.progressLabel.includes("All")
+                ? i18n.t.btn_cancel_all
+                : i18n.t.btn_cancel
+            }}
           </button>
         </div>
       </div>
@@ -57,7 +61,23 @@ const zipUrl = computed(() => {
         />
       </div>
       <p class="text-xs text-text-dim mt-2 font-mono">
-        {{ store.progressText || i18n.t.progress_waiting }}
+        <template v-if="store.downloading">
+          {{ store.progressText || i18n.t.progress_waiting }}
+          <span v-if="store.progressText">
+            · <span class="text-accent-teal">ok:{{ store.progressOk }}</span>
+            <span
+              :class="
+                store.progressFail > 0
+                  ? 'text-red-400 font-bold ml-1'
+                  : 'text-text-dim ml-1'
+              "
+              >fail:{{ store.progressFail }}</span
+            >
+          </span>
+        </template>
+        <template v-else>
+          {{ store.progressText || i18n.t.progress_waiting }}
+        </template>
       </p>
 
       <!-- Completed file download links -->
@@ -75,7 +95,7 @@ const zipUrl = computed(() => {
               f.district
             }}</span>
             <span class="text-xs text-text-dim font-mono"
-              >{{ f.tileCount }} tiles · {{ f.sizeMB }} MB ·
+              >{{ f.tileCount }} tiles · {{ f.sizeMB }} MB (.mbtiles) ·
               {{ f.elapsed }}s</span
             >
           </div>

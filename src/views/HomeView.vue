@@ -1,29 +1,21 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useDownloadStore } from "../stores/download";
+import { useProcessingStore } from "../stores/processing";
 import { useToastStore } from "../stores/toast";
 import { useI18n } from "../i18n";
 import DistrictGrid from "../components/DistrictGrid.vue";
-import DownloadProgress from "../components/DownloadProgress.vue";
+import ProcessingProgress from "../components/ProcessingProgress.vue";
 
-const store = useDownloadStore();
+const store = useProcessingStore();
 const toast = useToastStore();
 const i18n = useI18n();
 const geojson = ref(false);
-const geojsonAck = ref(false);
 
 onMounted(() => store.fetchDistricts());
 
 function startDownload() {
   if (store.selected.size === 0) {
     toast.show(i18n.t.toast_select_warning, "warning");
-    return;
-  }
-  if (geojson.value && !geojsonAck.value) {
-    toast.show(
-      "Please acknowledge the GeoJSON limitations before proceeding.",
-      "warning",
-    );
     return;
   }
   store.startDownload(geojson.value);
@@ -37,7 +29,7 @@ const viewState = computed(() => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+  <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
     <!-- Header -->
     <header class="mb-10 text-center animate-fade-up">
       <h1 class="text-3xl sm:text-4xl font-bold text-accent-coral mb-3">
@@ -172,7 +164,7 @@ const viewState = computed(() => {
             </button>
             <button
               @click="store.startDownloadAll(geojson)"
-              :disabled="store.downloading"
+              :disabled="store.downloading || store.completedFiles.length > 0"
               class="inline-flex items-center gap-1.5 border border-accent-coral/30 bg-accent-coral/10 px-3 py-1.5 text-xs font-medium text-accent-coral hover:bg-accent-coral/20 transition cursor-pointer disabled:border-border-default disabled:bg-bg-elevated disabled:text-text-dim disabled:cursor-not-allowed"
             >
               <svg
@@ -217,70 +209,94 @@ const viewState = computed(() => {
 
         <!-- Controls -->
         <section class="border border-border-default bg-bg-surface p-6 mb-8">
-          <div class="flex flex-col sm:flex-row flex-wrap items-center gap-4">
-            <!-- GeoJSON toggle -->
-            <button
-              @click="geojson = !geojson"
-              class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer select-none border"
-              :class="
-                geojson
-                  ? 'bg-accent-amber/10 border-accent-amber/50 text-accent-amber'
-                  : 'bg-bg-elevated border-border-default text-text-dim hover:border-text-dim'
-              "
+          <div class="flex flex-col gap-4">
+            <!-- Top Controls Row -->
+            <div
+              class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
             >
-              <span
-                class="relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors duration-200"
-                :class="geojson ? 'bg-accent-amber' : 'bg-bg-deep'"
+              <!-- GeoJSON toggle -->
+              <button
+                @click="geojson = !geojson"
+                class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer select-none border"
+                :class="
+                  geojson
+                    ? 'bg-accent-amber/10 border-accent-amber/50 text-accent-amber'
+                    : 'bg-bg-elevated border-border-default text-text-dim hover:border-text-dim'
+                "
               >
                 <span
-                  class="inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5"
-                  :class="geojson ? 'translate-x-3.5 ml-0' : 'translate-x-0.5'"
-                />
-              </span>
-              {{ i18n.t.btn_include_geojson }}
-            </button>
-            <!-- GeoJSON warning + ack -->
-            <div v-if="geojson" class="w-full mt-2 text-xs text-text-dim">
-              <label class="inline-flex items-start gap-2">
-                <input type="checkbox" v-model="geojsonAck" class="mt-1" />
-                <span>
-                  Warning: GeoJSON is derived from vector tiles at a single zoom
-                  level. This can produce low-resolution geometries, clipped
-                  building outlines, and mismatched edges. I acknowledge these
-                  limitations.
+                  class="relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors duration-200"
+                  :class="geojson ? 'bg-accent-amber' : 'bg-bg-deep'"
+                >
+                  <span
+                    class="inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5"
+                    :class="
+                      geojson ? 'translate-x-3.5 ml-0' : 'translate-x-0.5'
+                    "
+                  />
                 </span>
-              </label>
+                {{ i18n.t.btn_include_geojson }}
+              </button>
+
+              <!-- Download buttons -->
+              <div
+                class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto"
+              >
+                <button
+                  @click="startDownload"
+                  :disabled="store.downloading || store.selected.size === 0 || store.completedFiles.length > 0"
+                  class="inline-flex items-center gap-1.5 border border-accent-teal/30 bg-accent-teal/10 px-5 py-2.5 font-semibold text-sm text-accent-teal hover:bg-accent-teal/20 active:scale-95 transition-all duration-150 disabled:border-border-default disabled:bg-bg-elevated disabled:text-text-dim disabled:cursor-not-allowed cursor-pointer w-full sm:w-auto"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+                    />
+                  </svg>
+                  {{ i18n.t.btn_download_selected }} ({{ store.selected.size }})
+                </button>
+              </div>
             </div>
 
-            <!-- Download buttons -->
+            <!-- GeoJSON warning -->
             <div
-              class="flex flex-wrap items-center gap-3 justify-center sm:justify-end w-full sm:w-auto"
+              v-if="geojson"
+              class="w-full mt-2 p-3 text-xs bg-accent-amber/10 border border-accent-amber/20 text-accent-amber flex gap-2 rounded-sm items-center"
             >
-              <button
-                @click="startDownload"
-                :disabled="store.downloading || store.selected.size === 0"
-                class="inline-flex items-center gap-1.5 border border-accent-teal/30 bg-accent-teal/10 px-5 py-2.5 font-semibold text-sm text-accent-teal hover:bg-accent-teal/20 active:scale-95 transition-all duration-150 disabled:border-border-default disabled:bg-bg-elevated disabled:text-text-dim disabled:cursor-not-allowed cursor-pointer"
+              <svg
+                class="w-4 h-4 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-                  />
-                </svg>
-                {{ i18n.t.btn_download_selected }} ({{ store.selected.size }})
-              </button>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 9v2.25m0 3h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3Z"
+                />
+              </svg>
+              <span>
+                GeoJSON is derived directly from vector tiles. This can
+                occasionally produce
+                <strong class="text-xs">low-resolution geometries</strong>
+                or
+                <strong class="text-xs">
+                  clipped building outlines at district borders
+                </strong>
+              </span>
             </div>
           </div>
         </section>
 
-        <DownloadProgress />
+        <ProcessingProgress />
       </div>
     </Transition>
   </div>

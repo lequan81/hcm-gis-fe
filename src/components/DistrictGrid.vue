@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useDownloadStore } from "../stores/download";
+import { useProcessingStore } from "../stores/processing";
 
-const store = useDownloadStore();
+const store = useProcessingStore();
 
 function staggerDelay(index: number): string {
   return `animation-delay: ${index * 30}ms`;
@@ -10,12 +10,12 @@ function staggerDelay(index: number): string {
 
 <template>
   <div
-    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6 justify-items-center"
+    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-6 justify-items-center"
   >
     <div
       v-for="(d, idx) in store.districts"
       :key="d.key"
-      class="stagger-item group relative border px-4 py-3 cursor-pointer transition-all duration-150 select-none hover:bg-bg-elevated w-11/12 sm:w-full max-w-sm"
+      class="stagger-item group relative border px-4 py-3 cursor-pointer transition-all duration-150 select-none hover:bg-bg-elevated w-11/12 sm:w-full min-w-52"
       :class="
         store.selected.has(d.key)
           ? 'border-accent-teal bg-accent-teal/5'

@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import { useToastStore, playNotification } from "./toast";
 
-const API = import.meta.env.VITE_API_BASE_URL || "";
+const API = import.meta.env.VITE_API_BASE_URL || "/hcm-gis";
 
 export interface DistrictInfo {
   key: string;
@@ -19,7 +19,7 @@ export interface CompletedFile {
   elapsed: string;
 }
 
-export const useDownloadStore = defineStore("download", () => {
+export const useProcessingStore = defineStore("processing", () => {
   const districts = ref<DistrictInfo[]>([]);
   const urbanKeys = ref<string[]>([]);
   const allKeys = ref<string[]>([]);
@@ -28,6 +28,8 @@ export const useDownloadStore = defineStore("download", () => {
   const progressLabel = ref("");
   const progressText = ref("");
   const progressPct = ref(0);
+  const progressOk = ref(0);
+  const progressFail = ref(0);
   const completedFiles = ref<CompletedFile[]>([]);
   const connectionError = ref(false);
   const loading = ref(false);
@@ -91,9 +93,13 @@ export const useDownloadStore = defineStore("download", () => {
     lastGeojson.value = geojson;
     downloading.value = true;
     progressPct.value = 0;
+    progressOk.value = 0;
+    progressFail.value = 0;
     progressLabel.value = "Starting...";
     progressText.value = "";
     completedFiles.value = [];
+    // Track per-district progress to compute aggregate %
+    const districtProgress = new Map<string, { done: number; total: number; ok: number; fail: number }>();
     processingToastId.value = toast.show(`Processing ${keys.length} district(s)...`, "loading", true);
 
     const token = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -116,7 +122,10 @@ export const useDownloadStore = defineStore("download", () => {
         downloading.value = false;
         progressPct.value = 100;
         progressLabel.value = "Complete!";
-        progressText.value = d.message || "";
+        // Show aggregate stats from completed files
+        const totalTiles = completedFiles.value.reduce((s, f) => s + f.tileCount, 0);
+        const totalSize = completedFiles.value.reduce((s, f) => s + parseFloat(f.sizeMB), 0).toFixed(1);
+        progressText.value = `${completedFiles.value.length} district(s) · ${totalTiles} tiles · ${totalSize} MB`;
         if (processingToastId.value !== null) {
           toast.update(processingToastId.value, "All files ready to download", "success");
           processingToastId.value = null;
@@ -145,18 +154,30 @@ export const useDownloadStore = defineStore("download", () => {
         playNotification();
         return;
       }
-      const pct = d.total > 0 ? Math.round((d.done / d.total) * 100) : 0;
-      progressPct.value = pct;
+      // Update per-district tracker and compute aggregate
+      districtProgress.set(d.district, { done: d.done, total: d.total, ok: d.ok, fail: d.fail });
+      let totalDone = 0, totalAll = 0, totalOk = 0, totalFail = 0;
+      for (const v of districtProgress.values()) {
+        totalDone += v.done;
+        totalAll += v.total;
+        totalOk += v.ok;
+        totalFail += v.fail;
+      }
+      const pct = totalAll > 0 ? Math.round((totalDone / totalAll) * 100) : 0;
+      // Only allow progress to go forward (never decrease)
+      if (pct >= progressPct.value) progressPct.value = pct;
       const phase =
         d.phase === "downloading"
-          ? "Downloading"
+          ? "Processing"
           : d.phase === "writing_mbtiles"
             ? "Writing MBTiles"
             : d.phase === "extracting_geojson"
               ? "Extracting GeoJSON"
               : d.phase;
       progressLabel.value = phase;
-      progressText.value = `${d.done}/${d.total}${d.district ? " · " + d.district : ""} · ok:${d.ok} fail:${d.fail}`;
+      progressText.value = `${totalDone}/${totalAll} tiles`;
+      progressOk.value = totalOk;
+      progressFail.value = totalFail;
     };
     evtSource.onerror = () => {
       try { evtSource.close(); } catch { }
@@ -173,7 +194,9 @@ export const useDownloadStore = defineStore("download", () => {
     lastGeojson.value = geojson;
     downloading.value = true;
     progressPct.value = 0;
-    progressLabel.value = "Starting full HCM download...";
+    progressOk.value = 0;
+    progressFail.value = 0;
+    progressLabel.value = "Starting full HCM processing...";
     progressText.value = "";
     completedFiles.value = [];
     processingToastId.value = toast.show("Processing all HCM tiles...", "loading", true);
@@ -197,7 +220,9 @@ export const useDownloadStore = defineStore("download", () => {
         downloading.value = false;
         progressPct.value = 100;
         progressLabel.value = "Complete!";
-        progressText.value = d.message || "";
+        const totalTiles = completedFiles.value.reduce((s, f) => s + f.tileCount, 0);
+        const totalSize = completedFiles.value.reduce((s, f) => s + parseFloat(f.sizeMB), 0).toFixed(1);
+        progressText.value = `All HCM · ${totalTiles} tiles · ${totalSize} MB`;
         if (processingToastId.value !== null) {
           toast.update(processingToastId.value, "All HCM tiles ready to download", "success");
           processingToastId.value = null;
@@ -238,6 +263,8 @@ export const useDownloadStore = defineStore("download", () => {
               : d.phase;
       progressLabel.value = `${phase} (All HCM)`;
       progressText.value = `${d.done}/${d.total} · ok:${d.ok} fail:${d.fail}`;
+      progressOk.value = d.ok;
+      progressFail.value = d.fail;
     };
     evtSource.onerror = () => {
       try { evtSource.close(); } catch { }
@@ -258,6 +285,8 @@ export const useDownloadStore = defineStore("download", () => {
     progressLabel.value = "Canceled";
     progressText.value = "";
     progressPct.value = 0;
+    progressOk.value = 0;
+    progressFail.value = 0;
     // keep completedFiles as-is (user can keep artifacts), but if none, reset geojson flag
     if (completedFiles.value.length === 0) lastGeojson.value = false;
     // notify backend to stop any worker threads for this token
@@ -278,7 +307,7 @@ export const useDownloadStore = defineStore("download", () => {
 
   return {
     districts, urbanKeys, allKeys, selected, downloading,
-    progressLabel, progressText, progressPct, completedFiles,
+    progressLabel, progressText, progressPct, progressOk, progressFail, completedFiles,
     connectionError, loading, lastGeojson,
     fetchDistricts, toggle, selectAll, selectUrban, startDownload, startDownloadAll, removeFile, cancelProcessing,
   };

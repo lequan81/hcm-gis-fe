@@ -42,15 +42,22 @@
 
   <style>
     #app-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      z-index: 9999;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-direction: column;
-      height: 100vh;
       background: #0c0f1a;
       color: #94a3b8;
       font-family: 'Be Vietnam Pro', system-ui, sans-serif;
-      gap: 12px
+      gap: 12px;
     }
 
     #app-loader .spinner {
