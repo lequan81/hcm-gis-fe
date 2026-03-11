@@ -17,6 +17,27 @@ function pickLang(l: Locale) {
 
 const routeLoading = ref(false);
 const mobileMenuOpen = ref(false);
+
+const isDark = ref(true);
+if (typeof window !== "undefined") {
+  const saved = localStorage.getItem("theme");
+  if (saved === "light" || (!saved && !window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+    isDark.value = false;
+    document.documentElement.classList.add("light");
+  }
+}
+
+function toggleTheme() {
+  isDark.value = !isDark.value;
+  if (isDark.value) {
+    document.documentElement.classList.remove("light");
+    localStorage.setItem("theme", "dark");
+  } else {
+    document.documentElement.classList.add("light");
+    localStorage.setItem("theme", "light");
+  }
+}
+
 const router = useRouter();
 router.beforeEach(() => {
   routeLoading.value = true;
@@ -72,34 +93,54 @@ router.afterEach(() => {
         </button>
 
         <!-- Desktop nav links -->
-        <div class="hidden sm:flex items-center gap-4">
+        <div class="hidden sm:flex items-center gap-6 pt-0.5">
           <RouterLink
             to="/"
-            class="text-sm font-semibold text-text-primary hover:text-white transition-colors"
+            active-class="text-accent-teal after:scale-x-100 after:opacity-100"
+            class="relative text-sm font-medium text-text-secondary hover:text-text-primary transition-colors py-1 after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:bg-accent-teal after:origin-center after:scale-x-0 after:opacity-0 after:transition-all after:duration-300 after:ease-out"
           >
             {{ i18n.t.nav_home }}
           </RouterLink>
           <RouterLink
             to="/about"
-            class="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+            active-class="text-accent-teal after:scale-x-100 after:opacity-100"
+            class="relative text-sm font-medium text-text-secondary hover:text-text-primary transition-colors py-1 after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:bg-accent-teal after:origin-center after:scale-x-0 after:opacity-0 after:transition-all after:duration-300 after:ease-out"
           >
             {{ i18n.t.nav_about }}
           </RouterLink>
           <RouterLink
             to="/faq"
-            class="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+            active-class="text-accent-teal after:scale-x-100 after:opacity-100"
+            class="relative text-sm font-medium text-text-secondary hover:text-text-primary transition-colors py-1 after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:bg-accent-teal after:origin-center after:scale-x-0 after:opacity-0 after:transition-all after:duration-300 after:ease-out"
           >
             {{ i18n.t.nav_faq }}
           </RouterLink>
           <RouterLink
             to="/policy"
-            class="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+            active-class="text-accent-teal after:scale-x-100 after:opacity-100"
+            class="relative text-sm font-medium text-text-secondary hover:text-text-primary transition-colors py-1 after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:bg-accent-teal after:origin-center after:scale-x-0 after:opacity-0 after:transition-all after:duration-300 after:ease-out"
           >
             {{ i18n.t.nav_policy }}
           </RouterLink>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1 sm:gap-2">
+          <!-- Theme Toggle -->
+          <button
+            @click="toggleTheme"
+            class="p-1.5 text-text-secondary hover:text-accent-teal hover:bg-bg-surface rounded-full transition-colors cursor-pointer"
+            aria-label="Toggle theme"
+          >
+            <!-- Sun icon for dark mode (click to switch to light) -->
+            <svg v-if="isDark" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-2.25l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+            </svg>
+            <!-- Moon icon for light mode (click to switch to dark) -->
+            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+            </svg>
+          </button>
+
           <!-- Language selector -->
           <div class="relative">
             <button
@@ -184,32 +225,36 @@ router.afterEach(() => {
         <div
           class="pointer-events-auto max-w-md w-full mx-4 bg-bg-deep/95 backdrop-blur-lg border border-border-default rounded-lg shadow-xl overflow-hidden"
         >
-          <div class="px-4 py-4">
+          <div class="px-4 py-4 space-y-1">
             <RouterLink
               to="/"
               @click="mobileMenuOpen = false"
-              class="block px-3 py-2 text-sm font-semibold text-text-primary hover:bg-bg-surface transition-colors rounded"
+              active-class="text-accent-teal bg-accent-teal/10 !border-accent-teal"
+              class="block px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary transition-colors rounded border-l-[3px] border-transparent"
             >
               {{ i18n.t.nav_home }}
             </RouterLink>
             <RouterLink
               to="/about"
               @click="mobileMenuOpen = false"
-              class="block px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary transition-colors rounded"
+              active-class="text-accent-teal bg-accent-teal/10 !border-accent-teal"
+              class="block px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary transition-colors rounded border-l-[3px] border-transparent"
             >
               {{ i18n.t.nav_about }}
             </RouterLink>
             <RouterLink
               to="/faq"
               @click="mobileMenuOpen = false"
-              class="block px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary transition-colors rounded"
+              active-class="text-accent-teal bg-accent-teal/10 !border-accent-teal"
+              class="block px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary transition-colors rounded border-l-[3px] border-transparent"
             >
               {{ i18n.t.nav_faq }}
             </RouterLink>
             <RouterLink
               to="/policy"
               @click="mobileMenuOpen = false"
-              class="block px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary transition-colors rounded"
+              active-class="text-accent-teal bg-accent-teal/10 !border-accent-teal"
+              class="block px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-surface hover:text-text-primary transition-colors rounded border-l-[3px] border-transparent"
             >
               {{ i18n.t.nav_policy }}
             </RouterLink>

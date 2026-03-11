@@ -284,13 +284,7 @@ const viewState = computed(() => {
                 />
               </svg>
               <span>
-                GeoJSON is derived directly from vector tiles. This can
-                occasionally produce
-                <strong class="text-xs">low-resolution geometries</strong>
-                or
-                <strong class="text-xs">
-                  clipped building outlines at district borders
-                </strong>
+                {{ i18n.t.geojson_warning }}
               </span>
             </div>
           </div>

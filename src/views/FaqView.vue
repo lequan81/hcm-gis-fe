@@ -4,7 +4,7 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+  <div class="max-w-3xl w-full mx-auto px-4 sm:px-6 py-10">
     <h1 class="text-2xl sm:text-3xl font-bold text-accent-coral mb-8">
       {{ t.faq_title }}
     </h1>
