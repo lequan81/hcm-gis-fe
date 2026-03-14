@@ -5,6 +5,7 @@ import { useI18n } from "../i18n";
 const store = useProcessingStore();
 const i18n = useI18n();
 const apiBase = import.meta.env.VITE_API_BASE_URL || "/hcm-gis";
+const downloadsReady = computed(() => store.downloadsReady);
 
 function onCancel() {
   try {
@@ -78,6 +79,7 @@ const zipUrl = computed(() => {
         <template v-else>
           {{ store.progressText || i18n.t.progress_waiting }}
         </template>
+        <span v-if="store.preparingDownloads" class="ml-2 text-accent-amber">Preparing downloads...</span>
       </p>
 
       <!-- Completed file download links -->
@@ -100,47 +102,50 @@ const zipUrl = computed(() => {
             >
           </div>
           <div class="flex items-center gap-1.5">
-            <!-- MBTiles download -->
-            <a
-              :href="`${apiBase}/api/files/${f.id}`"
-              class="inline-flex items-center gap-1 border border-accent-teal/30 bg-accent-teal/10 px-2.5 py-1 text-accent-teal text-xs font-medium hover:bg-accent-teal/20 transition-colors"
-            >
-              <svg
-                class="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                viewBox="0 0 24 24"
+            <template v-if="downloadsReady">
+              <!-- MBTiles download -->
+              <a
+                :href="`${apiBase}/api/files/${f.id}`"
+                class="inline-flex items-center gap-1 border border-accent-teal/30 bg-accent-teal/10 px-2.5 py-1 text-accent-teal text-xs font-medium hover:bg-accent-teal/20 transition-colors"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-                />
-              </svg>
-              .mbtiles
-            </a>
-            <!-- GeoJSON download -->
-            <a
-              v-if="store.lastGeojson"
-              :href="`${apiBase}/api/files/${f.id}/geojson`"
-              class="inline-flex items-center gap-1 border border-accent-amber/30 bg-accent-amber/10 px-2.5 py-1 text-accent-amber text-xs font-medium hover:bg-accent-amber/20 transition-colors"
-            >
-              <svg
-                class="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                viewBox="0 0 24 24"
+                <svg
+                  class="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+                  />
+                </svg>
+                .mbtiles
+              </a>
+              <!-- GeoJSON download -->
+              <a
+                v-if="store.lastGeojson"
+                :href="`${apiBase}/api/files/${f.id}/geojson`"
+                class="inline-flex items-center gap-1 border border-accent-amber/30 bg-accent-amber/10 px-2.5 py-1 text-accent-amber text-xs font-medium hover:bg-accent-amber/20 transition-colors"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-                />
-              </svg>
-              .geojson
-            </a>
+                <svg
+                  class="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+                  />
+                </svg>
+                .geojson
+              </a>
+            </template>
+            <span v-else class="text-xs text-text-dim">Preparing downloads...</span>
             <!-- Remove -->
             <button
               @click="store.removeFile(f.id)"
@@ -166,7 +171,7 @@ const zipUrl = computed(() => {
       </div>
 
       <!-- Download ZIP bundle -->
-      <div v-if="showZip" class="mt-4 pt-4 border-t border-border-default">
+      <div v-if="showZip && downloadsReady" class="mt-4 pt-4 border-t border-border-default">
         <a
           :href="zipUrl"
           class="inline-flex items-center gap-1.5 border border-accent-sky/30 bg-accent-sky/10 px-3 py-1.5 text-xs font-medium text-accent-sky hover:bg-accent-sky/20 transition-colors"

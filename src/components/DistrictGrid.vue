@@ -13,11 +13,11 @@ function staggerDelay(index: number): string {
     class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-6 justify-items-center"
   >
     <div
-      v-for="(d, idx) in store.districts"
+      v-for="(d, idx) in store.data.districts"
       :key="d.key"
       class="stagger-item group relative border px-4 py-3 cursor-pointer transition-all duration-150 select-none hover:bg-bg-elevated w-11/12 sm:w-full min-w-52"
       :class="
-        store.selected.has(d.key)
+        store.data.selected.has(d.key)
           ? 'border-accent-teal bg-accent-teal/5'
           : 'border-border-default bg-bg-surface'
       "
@@ -29,13 +29,13 @@ function staggerDelay(index: number): string {
         <div
           class="w-4 h-4 rounded-full border-2 transition-all duration-150 flex items-center justify-center"
           :class="
-            store.selected.has(d.key)
+            store.data.selected.has(d.key)
               ? 'bg-accent-teal border-accent-teal'
               : 'border-border-default'
           "
         >
           <svg
-            v-if="store.selected.has(d.key)"
+            v-if="store.data.selected.has(d.key)"
             class="w-2.5 h-2.5 text-bg-deep"
             fill="none"
             stroke="currentColor"
