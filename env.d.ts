@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_CONTACT_EMAIL: string;
   readonly VITE_TWITTER_URL: string;
   readonly VITE_FACEBOOK_URL: string;
+  readonly VITE_FILE_RETENTION_HOURS: string;
 }
 
 interface ImportMeta {

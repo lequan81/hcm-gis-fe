@@ -4,11 +4,108 @@ import { useToastStore, playNotification } from "./toast";
 
 const API = import.meta.env.VITE_API_BASE_URL || "/hcm-gis";
 
+type JsonValue = string | number | boolean | null | JsonObject | JsonValue[];
+type JsonObject = { [key: string]: JsonValue };
+
+function isJsonObject(value: JsonValue): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNumber(value: JsonValue): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isStringArray(value: JsonValue): value is string[] {
+  return Array.isArray(value) && value.every((v) => typeof v === "string");
+}
+
+function isBbox(value: JsonValue): value is [number, number, number, number] {
+  return Array.isArray(value) && value.length === 4 && value.every((v) => typeof v === "number");
+}
+
 export interface DistrictInfo {
   key: string;
   name: string;
   tiles: number;
-  bbox: number[];
+  bbox: [number, number, number, number];
+}
+
+interface DistrictsResponse {
+  districts: DistrictInfo[];
+  urbanKeys: string[];
+  allKeys: string[];
+}
+
+function isDistrictInfo(value: JsonValue): value is DistrictInfo {
+  if (!isJsonObject(value)) return false;
+  return (
+    typeof value.key === "string" &&
+    typeof value.name === "string" &&
+    isNumber(value.tiles) &&
+    isBbox(value.bbox)
+  );
+}
+
+function isDistrictsResponse(value: JsonValue): value is DistrictsResponse {
+  if (!isJsonObject(value)) return false;
+  return (
+    Array.isArray(value.districts) &&
+    value.districts.every(isDistrictInfo) &&
+    isStringArray(value.urbanKeys) &&
+    isStringArray(value.allKeys)
+  );
+}
+
+type ProgressMessage = {
+  phase: "downloading" | "writing_mbtiles" | "extracting_geojson";
+  district: string;
+  done: number;
+  total: number;
+  ok: number;
+  fail: number;
+};
+
+type DoneDistrictMessage = {
+  phase: "done_district";
+  district: string;
+  id: string;
+  tileCount: number;
+  sizeMB: string;
+  elapsed: string;
+};
+
+type DoneMessage = {
+  phase: "done";
+  message: string;
+};
+
+type ErrorMessage = {
+  phase: "error";
+  message: string;
+};
+
+type SseMessage = ProgressMessage | DoneDistrictMessage | DoneMessage | ErrorMessage;
+
+function isSseMessage(value: JsonValue): value is SseMessage {
+  if (!isJsonObject(value) || typeof value.phase !== "string") return false;
+  if (value.phase === "done") return typeof value.message === "string";
+  if (value.phase === "error") return typeof value.message === "string";
+  if (value.phase === "done_district") {
+    return (
+      typeof value.id === "string" &&
+      typeof value.district === "string" &&
+      isNumber(value.tileCount) &&
+      typeof value.sizeMB === "string" &&
+      typeof value.elapsed === "string"
+    );
+  }
+  return (
+    typeof value.district === "string" &&
+    isNumber(value.done) &&
+    isNumber(value.total) &&
+    isNumber(value.ok) &&
+    isNumber(value.fail)
+  );
 }
 
 export interface CompletedFile {
@@ -45,7 +142,8 @@ export const useProcessingStore = defineStore("processing", () => {
     try {
       const res = await fetch(`${API}/api/districts`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = (await res.json()) as JsonValue;
+      if (!isDistrictsResponse(data)) throw new Error("Invalid districts response");
       districts.value = data.districts;
       urbanKeys.value = data.urbanKeys;
       allKeys.value = data.allKeys;
@@ -114,7 +212,22 @@ export const useProcessingStore = defineStore("processing", () => {
     );
     currentSource.value = evtSource;
     evtSource.onmessage = (e) => {
-      const d = JSON.parse(e.data);
+      let d: SseMessage;
+      try {
+        const parsed = JSON.parse(e.data) as JsonValue;
+        if (!isSseMessage(parsed)) throw new Error("Invalid SSE payload");
+        d = parsed;
+      } catch {
+        try { evtSource.close(); } catch { }
+        currentSource.value = null;
+        currentToken.value = null;
+        downloading.value = false;
+        progressLabel.value = "Error";
+        progressText.value = "Invalid server response";
+        const toast = useToastStore();
+        toast.show("Invalid server response", "error");
+        return;
+      }
       if (d.phase === "done") {
         try { evtSource.close(); } catch { }
         currentSource.value = null;
@@ -212,7 +325,22 @@ export const useProcessingStore = defineStore("processing", () => {
     );
     currentSource.value = evtSource;
     evtSource.onmessage = (e) => {
-      const d = JSON.parse(e.data);
+      let d: SseMessage;
+      try {
+        const parsed = JSON.parse(e.data) as JsonValue;
+        if (!isSseMessage(parsed)) throw new Error("Invalid SSE payload");
+        d = parsed;
+      } catch {
+        try { evtSource.close(); } catch { }
+        currentSource.value = null;
+        currentToken.value = null;
+        downloading.value = false;
+        progressLabel.value = "Error";
+        progressText.value = "Invalid server response";
+        const toast = useToastStore();
+        toast.show("Invalid server response", "error");
+        return;
+      }
       if (d.phase === "done") {
         try { evtSource.close(); } catch { }
         currentSource.value = null;

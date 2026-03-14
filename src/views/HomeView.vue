@@ -10,6 +10,7 @@ const store = useProcessingStore();
 const toast = useToastStore();
 const i18n = useI18n();
 const geojson = ref(false);
+const retentionHours = Number(import.meta.env.VITE_FILE_RETENTION_HOURS || 24) || 24;
 
 onMounted(() => store.fetchDistricts());
 
@@ -95,16 +96,9 @@ const viewState = computed(() => {
         key="skeleton"
         class="animate-pulse"
       >
-        <div class="flex gap-2 mb-4">
-          <div
-            class="h-8 w-20 bg-bg-elevated border border-border-default"
-          ></div>
-          <div
-            class="h-8 w-28 bg-bg-elevated border border-border-default"
-          ></div>
-          <div
-            class="h-8 w-20 bg-bg-elevated border border-border-default"
-          ></div>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <div class="h-8 w-28 bg-bg-elevated border border-border-default"></div>
+          <div class="h-8 w-24 bg-bg-elevated border border-border-default"></div>
         </div>
         <div
           class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-8"
@@ -122,16 +116,15 @@ const viewState = computed(() => {
           </div>
         </div>
         <div class="border border-border-default bg-bg-surface p-6">
-          <div class="flex flex-wrap gap-4">
-            <div
-              class="h-9 w-36 bg-bg-elevated border border-border-default"
-            ></div>
-            <div
-              class="h-9 w-44 bg-bg-elevated border border-border-default"
-            ></div>
-            <div
-              class="h-9 w-44 bg-bg-elevated border border-border-default"
-            ></div>
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-3">
+              <div class="h-9 w-44 bg-bg-elevated border border-border-default"></div>
+              <div class="h-6 w-56 bg-bg-elevated border border-border-default"></div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <div class="h-10 w-44 bg-bg-elevated border border-border-default"></div>
+              <div class="h-10 w-44 bg-bg-elevated border border-border-default"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -140,9 +133,7 @@ const viewState = computed(() => {
       <div v-else key="ready">
         <!-- Quick selection -->
         <section class="mb-8">
-          <div
-            class="flex flex-wrap items-center gap-2 mb-4 justify-center sm:justify-start"
-          >
+          <div class="flex flex-wrap items-center gap-2 mb-4 justify-center sm:justify-start">
             <button
               @click="store.selectUrban()"
               class="inline-flex items-center gap-1.5 border border-border-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:border-accent-amber hover:text-text-primary transition cursor-pointer"
@@ -161,26 +152,6 @@ const viewState = computed(() => {
                 />
               </svg>
               {{ i18n.t.btn_select_urban }}
-            </button>
-            <button
-              @click="store.startDownloadAll(geojson)"
-              :disabled="store.downloading || store.completedFiles.length > 0"
-              class="inline-flex items-center gap-1.5 border border-accent-coral/30 bg-accent-coral/10 px-3 py-1.5 text-xs font-medium text-accent-coral hover:bg-accent-coral/20 transition cursor-pointer disabled:border-border-default disabled:bg-bg-elevated disabled:text-text-dim disabled:cursor-not-allowed"
-            >
-              <svg
-                class="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-                />
-              </svg>
-              {{ i18n.t.btn_download_all }} ({{ store.districts.length }})
             </button>
             <button
               v-if="store.selected.size > 0"
@@ -211,37 +182,44 @@ const viewState = computed(() => {
         <section class="border border-border-default bg-bg-surface p-6 mb-8">
           <div class="flex flex-col gap-4">
             <!-- Top Controls Row -->
-            <div
-              class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-            >
-              <!-- GeoJSON toggle -->
-              <button
-                @click="geojson = !geojson"
-                class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer select-none border"
-                :class="
-                  geojson
-                    ? 'bg-accent-amber/10 border-accent-amber/50 text-accent-amber'
-                    : 'bg-bg-elevated border-border-default text-text-dim hover:border-text-dim'
-                "
-              >
-                <span
-                  class="relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors duration-200"
-                  :class="geojson ? 'bg-accent-amber' : 'bg-bg-deep'"
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <!-- GeoJSON toggle -->
+                <button
+                  @click="geojson = !geojson"
+                  class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer select-none border"
+                  :class="
+                    geojson
+                      ? 'bg-accent-amber/10 border-accent-amber/50 text-accent-amber'
+                      : 'bg-bg-elevated border-border-default text-text-dim hover:border-text-dim'
+                  "
                 >
                   <span
-                    class="inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5"
-                    :class="
-                      geojson ? 'translate-x-3.5 ml-0' : 'translate-x-0.5'
-                    "
-                  />
-                </span>
-                {{ i18n.t.btn_include_geojson }}
-              </button>
+                    class="relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors duration-200"
+                    :class="geojson ? 'bg-accent-amber' : 'bg-bg-deep'"
+                  >
+                    <span
+                      class="inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5"
+                      :class="
+                        geojson ? 'translate-x-3.5 ml-0' : 'translate-x-0.5'
+                      "
+                    />
+                  </span>
+                  {{ i18n.t.btn_include_geojson }}
+                </button>
+
+                <!-- Retention note -->
+                <div class="inline-flex items-center gap-2 text-xs text-text-dim border border-border-default bg-bg-elevated px-3 py-1.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2" />
+                    <circle cx="12" cy="12" r="9" />
+                  </svg>
+                  Files auto-delete after {{ retentionHours }} hours
+                </div>
+              </div>
 
               <!-- Download buttons -->
-              <div
-                class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto"
-              >
+              <div class="flex flex-col sm:flex-row items-stretch gap-3">
                 <button
                   @click="startDownload"
                   :disabled="store.downloading || store.selected.size === 0 || store.completedFiles.length > 0"
@@ -261,6 +239,26 @@ const viewState = computed(() => {
                     />
                   </svg>
                   {{ i18n.t.btn_download_selected }} ({{ store.selected.size }})
+                </button>
+                <button
+                  @click="store.startDownloadAll(geojson)"
+                  :disabled="store.downloading || store.completedFiles.length > 0"
+                  class="inline-flex items-center gap-1.5 border border-accent-coral/30 bg-accent-coral/10 px-5 py-2.5 font-semibold text-sm text-accent-coral hover:bg-accent-coral/20 transition cursor-pointer disabled:border-border-default disabled:bg-bg-elevated disabled:text-text-dim disabled:cursor-not-allowed w-full sm:w-auto"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+                    />
+                  </svg>
+                  {{ i18n.t.btn_download_all }} ({{ store.districts.length }})
                 </button>
               </div>
             </div>
