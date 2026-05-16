@@ -20,7 +20,11 @@ function isStringArray(value: JsonValue): value is string[] {
 }
 
 function isBbox(value: JsonValue): value is [number, number, number, number] {
-  return Array.isArray(value) && value.length === 4 && value.every((v) => typeof v === "number");
+  return (
+    Array.isArray(value) &&
+    value.length === 4 &&
+    value.every((v) => typeof v === "number")
+  );
 }
 
 export interface DistrictInfo {
@@ -46,7 +50,9 @@ function isDistrictInfo(value: JsonValue): value is DistrictInfo & JsonObject {
   );
 }
 
-function isDistrictsResponse(value: JsonValue): value is DistrictsResponse & JsonObject {
+function isDistrictsResponse(
+  value: JsonValue,
+): value is DistrictsResponse & JsonObject {
   return (
     isJsonObject(value) &&
     Array.isArray(value.districts) &&
@@ -84,7 +90,11 @@ type ErrorMessage = {
   message: string;
 };
 
-type SseMessage = ProgressMessage | DoneDistrictMessage | DoneMessage | ErrorMessage;
+type SseMessage =
+  | ProgressMessage
+  | DoneDistrictMessage
+  | DoneMessage
+  | ErrorMessage;
 
 function isSseMessage(value: JsonValue): value is SseMessage {
   if (!isJsonObject(value) || typeof value.phase !== "string") return false;
@@ -148,10 +158,18 @@ export const useProcessingStore = defineStore("processing", () => {
     processingToastId: null as number | null,
   });
 
-  type PrepareResponse = { status: "ready" | "building"; cacheKey?: string; size?: number; filename?: string };
+  type PrepareResponse = {
+    status: "ready" | "building";
+    cacheKey?: string;
+    size?: number;
+    filename?: string;
+  };
 
   function isPrepareResponse(value: JsonValue): value is PrepareResponse {
-    return isJsonObject(value) && (value.status === "ready" || value.status === "building");
+    return (
+      isJsonObject(value) &&
+      (value.status === "ready" || value.status === "building")
+    );
   }
 
   async function prepareBundle(ids: string[]) {
@@ -165,10 +183,13 @@ export const useProcessingStore = defineStore("processing", () => {
     const toast = useToastStore();
     try {
       for (let attempt = 0; attempt < 20; attempt++) {
-        const res = await fetch(`${API}/api/bundle/prepare?ids=${ids.join(",")}`);
+        const res = await fetch(
+          `${API}/api/bundle/prepare?ids=${ids.join(",")}`,
+        );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const resp = (await res.json()) as JsonValue;
-        if (!isPrepareResponse(resp)) throw new Error("Invalid prepare response");
+        if (!isPrepareResponse(resp))
+          throw new Error("Invalid prepare response");
         if (resp.status === "ready") {
           return;
         }
@@ -176,7 +197,10 @@ export const useProcessingStore = defineStore("processing", () => {
       }
       throw new Error("Prepare timeout");
     } catch {
-      toast.show("Failed to prepare downloads. You can still download directly.", "warning");
+      toast.show(
+        "Failed to prepare downloads. You can still download directly.",
+        "warning",
+      );
     } finally {
       ui.preparingDownloads = false;
       ui.downloadsReady = true;
@@ -186,12 +210,13 @@ export const useProcessingStore = defineStore("processing", () => {
   async function fetchDistricts() {
     ui.loading = true;
     ui.connectionError = false;
-    const minDelay = new Promise(r => setTimeout(r, 500));
+    const minDelay = new Promise((r) => setTimeout(r, 500));
     try {
       const res = await fetch(`${API}/api/districts`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const resp = (await res.json()) as JsonValue;
-      if (!isDistrictsResponse(resp)) throw new Error("Invalid districts response");
+      if (!isDistrictsResponse(resp))
+        throw new Error("Invalid districts response");
       data.districts = resp.districts;
       data.urbanKeys = resp.urbanKeys;
       data.allKeys = resp.allKeys;
@@ -221,7 +246,7 @@ export const useProcessingStore = defineStore("processing", () => {
   }
 
   function removeFile(id: string) {
-    data.completedFiles = data.completedFiles.filter(f => f.id !== id);
+    data.completedFiles = data.completedFiles.filter((f) => f.id !== id);
     if (data.completedFiles.length === 0) {
       ui.downloading = false;
       progress.pct = 0;
@@ -249,18 +274,27 @@ export const useProcessingStore = defineStore("processing", () => {
     progress.text = "";
     data.completedFiles = [];
     // Track per-district progress to compute aggregate %
-    const districtProgress = new Map<string, { done: number; total: number; ok: number; fail: number }>();
-    runtime.processingToastId = toast.show(`Processing ${keys.length} district(s)...`, "loading", true);
+    const districtProgress = new Map<
+      string,
+      { done: number; total: number; ok: number; fail: number }
+    >();
+    runtime.processingToastId = toast.show(
+      `Processing ${keys.length} district(s)...`,
+      "loading",
+      true,
+    );
 
     const token = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     runtime.currentToken = token;
     if (runtime.currentSource) {
-      try { runtime.currentSource.close(); } catch { }
+      try {
+        runtime.currentSource.close();
+      } catch {}
       runtime.currentSource = null;
     }
 
     const evtSource = new EventSource(
-      `${API}/api/download?keys=${keys.join(",")}&geojson=${geojson}&token=${token}`
+      `${API}/api/download?keys=${keys.join(",")}&geojson=${geojson}&token=${token}`,
     );
     runtime.currentSource = evtSource;
     evtSource.onmessage = async (e) => {
@@ -270,7 +304,9 @@ export const useProcessingStore = defineStore("processing", () => {
         if (!isSseMessage(parsed)) throw new Error("Invalid SSE payload");
         d = parsed;
       } catch {
-        try { evtSource.close(); } catch { }
+        try {
+          evtSource.close();
+        } catch {}
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
@@ -281,14 +317,21 @@ export const useProcessingStore = defineStore("processing", () => {
         return;
       }
       if (d.phase === "done") {
-        try { evtSource.close(); } catch { }
+        try {
+          evtSource.close();
+        } catch {}
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
         progress.pct = 100;
         // Show aggregate stats from completed files
-        const totalTiles = data.completedFiles.reduce((s, f) => s + f.tileCount, 0);
-        const totalSize = data.completedFiles.reduce((s, f) => s + parseFloat(f.sizeMB), 0).toFixed(1);
+        const totalTiles = data.completedFiles.reduce(
+          (s, f) => s + f.tileCount,
+          0,
+        );
+        const totalSize = data.completedFiles
+          .reduce((s, f) => s + parseFloat(f.sizeMB), 0)
+          .toFixed(1);
         const doneText = `${data.completedFiles.length} district(s) · ${totalTiles} tiles · ${totalSize} MB`;
         progress.label = "Preparing downloads...";
         progress.text = "Building ZIP cache...";
@@ -296,7 +339,11 @@ export const useProcessingStore = defineStore("processing", () => {
         progress.label = "Complete!";
         progress.text = doneText;
         if (runtime.processingToastId !== null) {
-          toast.update(runtime.processingToastId, "All files ready to download", "success");
+          toast.update(
+            runtime.processingToastId,
+            "All files ready to download",
+            "success",
+          );
           runtime.processingToastId = null;
         }
         playNotification();
@@ -304,13 +351,18 @@ export const useProcessingStore = defineStore("processing", () => {
       }
       if (d.phase === "done_district") {
         data.completedFiles.push({
-          id: d.id, district: d.district,
-          tileCount: d.tileCount, sizeMB: d.sizeMB, elapsed: d.elapsed,
+          id: d.id,
+          district: d.district,
+          tileCount: d.tileCount,
+          sizeMB: d.sizeMB,
+          elapsed: d.elapsed,
         });
         return;
       }
       if (d.phase === "error") {
-        try { evtSource.close(); } catch { }
+        try {
+          evtSource.close();
+        } catch {}
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
@@ -324,8 +376,16 @@ export const useProcessingStore = defineStore("processing", () => {
         return;
       }
       // Update per-district tracker and compute aggregate
-      districtProgress.set(d.district, { done: d.done, total: d.total, ok: d.ok, fail: d.fail });
-      let totalDone = 0, totalAll = 0, totalOk = 0, totalFail = 0;
+      districtProgress.set(d.district, {
+        done: d.done,
+        total: d.total,
+        ok: d.ok,
+        fail: d.fail,
+      });
+      let totalDone = 0,
+        totalAll = 0,
+        totalOk = 0,
+        totalFail = 0;
       for (const v of districtProgress.values()) {
         totalDone += v.done;
         totalAll += v.total;
@@ -349,7 +409,9 @@ export const useProcessingStore = defineStore("processing", () => {
       progress.fail = totalFail;
     };
     evtSource.onerror = () => {
-      try { evtSource.close(); } catch { }
+      try {
+        evtSource.close();
+      } catch {}
       runtime.currentSource = null;
       runtime.currentToken = null;
       ui.downloading = false;
@@ -368,16 +430,22 @@ export const useProcessingStore = defineStore("processing", () => {
     progress.label = "Starting full HCM processing...";
     progress.text = "";
     data.completedFiles = [];
-    runtime.processingToastId = toast.show("Processing all HCM tiles...", "loading", true);
+    runtime.processingToastId = toast.show(
+      "Processing all HCM tiles...",
+      "loading",
+      true,
+    );
 
     const token = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     runtime.currentToken = token;
     if (runtime.currentSource) {
-      try { runtime.currentSource.close(); } catch { }
+      try {
+        runtime.currentSource.close();
+      } catch {}
       runtime.currentSource = null;
     }
     const evtSource = new EventSource(
-      `${API}/api/download-all?geojson=${geojson}&token=${token}`
+      `${API}/api/download-all?geojson=${geojson}&token=${token}`,
     );
     runtime.currentSource = evtSource;
     evtSource.onmessage = async (e) => {
@@ -387,7 +455,9 @@ export const useProcessingStore = defineStore("processing", () => {
         if (!isSseMessage(parsed)) throw new Error("Invalid SSE payload");
         d = parsed;
       } catch {
-        try { evtSource.close(); } catch { }
+        try {
+          evtSource.close();
+        } catch {}
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
@@ -398,13 +468,20 @@ export const useProcessingStore = defineStore("processing", () => {
         return;
       }
       if (d.phase === "done") {
-        try { evtSource.close(); } catch { }
+        try {
+          evtSource.close();
+        } catch {}
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
         progress.pct = 100;
-        const totalTiles = data.completedFiles.reduce((s, f) => s + f.tileCount, 0);
-        const totalSize = data.completedFiles.reduce((s, f) => s + parseFloat(f.sizeMB), 0).toFixed(1);
+        const totalTiles = data.completedFiles.reduce(
+          (s, f) => s + f.tileCount,
+          0,
+        );
+        const totalSize = data.completedFiles
+          .reduce((s, f) => s + parseFloat(f.sizeMB), 0)
+          .toFixed(1);
         const doneText = `All HCM · ${totalTiles} tiles · ${totalSize} MB`;
         progress.label = "Preparing downloads...";
         progress.text = "Building ZIP cache...";
@@ -412,7 +489,11 @@ export const useProcessingStore = defineStore("processing", () => {
         progress.label = "Complete!";
         progress.text = doneText;
         if (runtime.processingToastId !== null) {
-          toast.update(runtime.processingToastId, "All HCM tiles ready to download", "success");
+          toast.update(
+            runtime.processingToastId,
+            "All HCM tiles ready to download",
+            "success",
+          );
           runtime.processingToastId = null;
         }
         playNotification();
@@ -420,13 +501,18 @@ export const useProcessingStore = defineStore("processing", () => {
       }
       if (d.phase === "done_district") {
         data.completedFiles.push({
-          id: d.id, district: d.district,
-          tileCount: d.tileCount, sizeMB: d.sizeMB, elapsed: d.elapsed,
+          id: d.id,
+          district: d.district,
+          tileCount: d.tileCount,
+          sizeMB: d.sizeMB,
+          elapsed: d.elapsed,
         });
         return;
       }
       if (d.phase === "error") {
-        try { evtSource.close(); } catch { }
+        try {
+          evtSource.close();
+        } catch {}
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
@@ -455,7 +541,9 @@ export const useProcessingStore = defineStore("processing", () => {
       progress.fail = d.fail;
     };
     evtSource.onerror = () => {
-      try { evtSource.close(); } catch { }
+      try {
+        evtSource.close();
+      } catch {}
       runtime.currentSource = null;
       runtime.currentToken = null;
       ui.downloading = false;
@@ -466,7 +554,9 @@ export const useProcessingStore = defineStore("processing", () => {
 
   function cancelProcessing() {
     if (runtime.currentSource) {
-      try { runtime.currentSource.close(); } catch { }
+      try {
+        runtime.currentSource.close();
+      } catch {}
       runtime.currentSource = null;
     }
     ui.downloading = false;
@@ -482,14 +572,19 @@ export const useProcessingStore = defineStore("processing", () => {
     // notify backend to stop any worker threads for this token
     if (runtime.currentToken) {
       try {
-        fetch(`${API}/api/cancel`, { method: "POST", body: runtime.currentToken });
-      } catch { }
+        fetch(`${API}/api/cancel`, {
+          method: "POST",
+          body: runtime.currentToken,
+        });
+      } catch {}
       runtime.currentToken = null;
     }
     const toast = useToastStore();
     // dismiss or update the persistent processing toast if present
     if (runtime.processingToastId !== null) {
-      try { toast.dismiss(runtime.processingToastId); } catch { }
+      try {
+        toast.dismiss(runtime.processingToastId);
+      } catch {}
       runtime.processingToastId = null;
     }
     toast.show("Processing canceled", "warning");

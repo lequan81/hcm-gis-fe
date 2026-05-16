@@ -79,7 +79,9 @@ const zipUrl = computed(() => {
         <template v-else>
           {{ store.progressText || i18n.t.progress_waiting }}
         </template>
-        <span v-if="store.preparingDownloads" class="ml-2 text-accent-amber">Preparing downloads...</span>
+        <span v-if="store.preparingDownloads" class="ml-2 text-accent-amber"
+          >Preparing downloads...</span
+        >
       </p>
 
       <!-- Completed file download links -->
@@ -145,7 +147,9 @@ const zipUrl = computed(() => {
                 .geojson
               </a>
             </template>
-            <span v-else class="text-xs text-text-dim">Preparing downloads...</span>
+            <span v-else class="text-xs text-text-dim"
+              >Preparing downloads...</span
+            >
             <!-- Remove -->
             <button
               @click="store.removeFile(f.id)"
@@ -171,7 +175,10 @@ const zipUrl = computed(() => {
       </div>
 
       <!-- Download ZIP bundle -->
-      <div v-if="showZip && downloadsReady" class="mt-4 pt-4 border-t border-border-default">
+      <div
+        v-if="showZip && downloadsReady"
+        class="mt-4 pt-4 border-t border-border-default"
+      >
         <a
           :href="zipUrl"
           class="inline-flex items-center gap-1.5 border border-accent-sky/30 bg-accent-sky/10 px-3 py-1.5 text-xs font-medium text-accent-sky hover:bg-accent-sky/20 transition-colors"

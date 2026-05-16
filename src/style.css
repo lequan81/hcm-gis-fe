@@ -38,18 +38,18 @@
 
 html.light {
   /* Light Theme Equivalents */
-  --theme-bg-deep: #f1f5f9;      /* slate-100 */
-  --theme-bg-surface: #ffffff;   /* white */
-  --theme-bg-elevated: #f8fafc;  /* slate-50 */
+  --theme-bg-deep: #f1f5f9; /* slate-100 */
+  --theme-bg-surface: #ffffff; /* white */
+  --theme-bg-elevated: #f8fafc; /* slate-50 */
   --theme-border-default: #cbd5e1; /* slate-300 */
-  --theme-border-active: #0ea5e9;  /* sky-500 */
-  --theme-text-primary: #0f172a;   /* slate-900 */
+  --theme-border-active: #0ea5e9; /* sky-500 */
+  --theme-text-primary: #0f172a; /* slate-900 */
   --theme-text-secondary: #475569; /* slate-600 */
-  --theme-text-dim: #94a3b8;       /* slate-400 */
-  --theme-accent-coral: #ea580c;   /* orange-600 */
-  --theme-accent-teal: #0d9488;    /* teal-600 */
-  --theme-accent-sky: #0284c7;     /* sky-600 */
-  --theme-accent-amber: #d97706;   /* amber-600 */
+  --theme-text-dim: #94a3b8; /* slate-400 */
+  --theme-accent-coral: #ea580c; /* orange-600 */
+  --theme-accent-teal: #0d9488; /* teal-600 */
+  --theme-accent-sky: #0284c7; /* sky-600 */
+  --theme-accent-amber: #d97706; /* amber-600 */
 }
 
 @keyframes toast-in {

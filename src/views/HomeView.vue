@@ -154,6 +154,26 @@ const viewState = computed(() => {
               {{ i18n.t.btn_select_urban }}
             </button>
             <button
+              @click="store.startDownloadAll(geojson)"
+              :disabled="store.downloading || store.completedFiles.length > 0"
+              class="inline-flex items-center gap-1.5 border border-accent-coral/30 bg-accent-coral/10 px-3 py-1.5 text-xs font-medium text-accent-coral hover:bg-accent-coral/20 transition cursor-pointer disabled:border-border-default disabled:bg-bg-elevated disabled:text-text-dim disabled:cursor-not-allowed"
+            >
+              <svg
+                class="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+                />
+              </svg>
+              {{ i18n.t.btn_download_all }}
+            </button>
+            <button
               v-if="store.selected.size > 0"
               @click="store.selectAll(false)"
               class="sm:ml-auto ml-0 inline-flex items-center gap-1.5 border border-red-500/30 bg-red-500/5 px-3 py-1.5 text-xs font-medium text-red-400 hover:border-red-400 hover:bg-red-500/10 transition cursor-pointer"
@@ -239,26 +259,6 @@ const viewState = computed(() => {
                     />
                   </svg>
                   {{ i18n.t.btn_download_selected }} ({{ store.selected.size }})
-                </button>
-                <button
-                  @click="store.startDownloadAll(geojson)"
-                  :disabled="store.downloading || store.completedFiles.length > 0"
-                  class="inline-flex items-center gap-1.5 border border-accent-coral/30 bg-accent-coral/10 px-5 py-2.5 font-semibold text-sm text-accent-coral hover:bg-accent-coral/20 transition cursor-pointer disabled:border-border-default disabled:bg-bg-elevated disabled:text-text-dim disabled:cursor-not-allowed w-full sm:w-auto"
-                >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-                    />
-                  </svg>
-                  {{ i18n.t.btn_download_all }} ({{ store.districts.length }})
                 </button>
               </div>
             </div>
