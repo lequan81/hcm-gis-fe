@@ -99,61 +99,61 @@ const zipUrl = computed(() => {
               f.district
             }}</span>
             <span class="text-xs text-text-dim font-mono"
-              >{{ f.tileCount }} tiles · {{ f.sizeMB }} MB (.mbtiles) ·
+              >{{ f.tileCount }} tiles · {{ f.sizeMB }} MB ·
               {{ f.elapsed }}s</span
             >
           </div>
-          <div class="flex items-center gap-1.5">
+          <div class="flex flex-wrap items-center gap-2">
             <template v-if="downloadsReady">
-              <!-- MBTiles download -->
+              <!-- MBTiles download button -->
               <a
                 :href="`${apiBase}/api/files/${f.id}`"
-                class="inline-flex items-center gap-1 border border-accent-teal/30 bg-accent-teal/10 px-2.5 py-1 text-accent-teal text-xs font-medium hover:bg-accent-teal/20 transition-colors"
+                class="inline-flex items-center gap-1.5 border border-accent-teal/40 bg-accent-teal/15 hover:bg-accent-teal/25 px-3 py-1.5 text-accent-teal text-xs font-medium rounded transition-colors active:scale-95"
               >
                 <svg
-                  class="w-3 h-3"
+                  class="w-3.5 h-3.5"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="1.5"
+                  stroke-width="2"
                   viewBox="0 0 24 24"
                 >
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                   />
                 </svg>
-                .mbtiles
+                {{ i18n.t.btn_download }} (.mbtiles)
               </a>
-              <!-- GeoJSON download -->
+              <!-- GeoJSON download button -->
               <a
                 v-if="store.lastGeojson"
                 :href="`${apiBase}/api/files/${f.id}/geojson`"
-                class="inline-flex items-center gap-1 border border-accent-amber/30 bg-accent-amber/10 px-2.5 py-1 text-accent-amber text-xs font-medium hover:bg-accent-amber/20 transition-colors"
+                class="inline-flex items-center gap-1.5 border border-accent-amber/40 bg-accent-amber/15 hover:bg-accent-amber/25 px-3 py-1.5 text-accent-amber text-xs font-medium rounded transition-colors active:scale-95"
               >
                 <svg
-                  class="w-3 h-3"
+                  class="w-3.5 h-3.5"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="1.5"
+                  stroke-width="2"
                   viewBox="0 0 24 24"
                 >
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                   />
                 </svg>
-                .geojson
+                {{ i18n.t.btn_download }} (.geojson)
               </a>
             </template>
-            <span v-else class="text-xs text-text-dim"
+            <span v-else class="text-xs text-text-dim italic"
               >Preparing downloads...</span
             >
             <!-- Remove -->
             <button
               @click="store.removeFile(f.id)"
-              class="p-1 text-text-dim hover:text-red-400 transition-colors cursor-pointer"
+              class="p-1 text-text-dim hover:text-red-400 transition-colors cursor-pointer ml-auto sm:ml-0"
               aria-label="Remove"
             >
               <svg
@@ -177,27 +177,38 @@ const zipUrl = computed(() => {
       <!-- Download ZIP bundle -->
       <div
         v-if="showZip && downloadsReady"
-        class="mt-4 pt-4 border-t border-border-default"
+        class="mt-6 pt-4 border-t border-border-default"
       >
+        <p
+          class="text-xs font-medium text-text-dim uppercase tracking-widest mb-3"
+        >
+          Bundle Download
+        </p>
         <a
           :href="zipUrl"
-          class="inline-flex items-center gap-1.5 border border-accent-sky/30 bg-accent-sky/10 px-3 py-1.5 text-xs font-medium text-accent-sky hover:bg-accent-sky/20 transition-colors"
+          class="inline-flex items-center gap-2 border border-accent-sky/50 bg-accent-sky/20 hover:bg-accent-sky/30 px-4 py-2 text-sm font-semibold text-accent-sky rounded transition-colors active:scale-95"
         >
           <svg
-            class="w-3.5 h-3.5"
+            class="w-4 h-4"
             fill="none"
             stroke="currentColor"
-            stroke-width="1.5"
+            stroke-width="2"
             viewBox="0 0 24 24"
           >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
-              d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+              d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
             />
           </svg>
           {{ i18n.t.btn_download_zip || "Download All as ZIP" }}
         </a>
+        <p class="text-xs text-text-dim mt-2">
+          {{ store.completedFiles.length }} file{{
+            store.completedFiles.length !== 1 ? "s" : ""
+          }}
+          · Compressed bundle
+        </p>
       </div>
     </div>
   </div>

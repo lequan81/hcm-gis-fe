@@ -80,9 +80,16 @@ type DoneDistrictMessage = {
   elapsed: string;
 };
 
+type ReadyMessage = {
+  phase: "ready";
+  message: string;
+  timestamp?: string;
+};
+
 type DoneMessage = {
   phase: "done";
   message: string;
+  timestamp?: string;
 };
 
 type ErrorMessage = {
@@ -91,6 +98,7 @@ type ErrorMessage = {
 };
 
 type SseMessage =
+  | ReadyMessage
   | ProgressMessage
   | DoneDistrictMessage
   | DoneMessage
@@ -98,6 +106,7 @@ type SseMessage =
 
 function isSseMessage(value: JsonValue): value is SseMessage {
   if (!isJsonObject(value) || typeof value.phase !== "string") return false;
+  if (value.phase === "ready") return typeof value.message === "string";
   if (value.phase === "done") return typeof value.message === "string";
   if (value.phase === "error") return typeof value.message === "string";
   if (value.phase === "done_district") {
@@ -289,7 +298,7 @@ export const useProcessingStore = defineStore("processing", () => {
     if (runtime.currentSource) {
       try {
         runtime.currentSource.close();
-      } catch {}
+      } catch { }
       runtime.currentSource = null;
     }
 
@@ -306,7 +315,7 @@ export const useProcessingStore = defineStore("processing", () => {
       } catch {
         try {
           evtSource.close();
-        } catch {}
+        } catch { }
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
@@ -316,10 +325,15 @@ export const useProcessingStore = defineStore("processing", () => {
         toast.show("Invalid server response", "error");
         return;
       }
+      if (d.phase === "ready") {
+        progress.label = "Connected";
+        progress.text = d.message;
+        return;
+      }
       if (d.phase === "done") {
         try {
           evtSource.close();
-        } catch {}
+        } catch { }
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
@@ -362,7 +376,7 @@ export const useProcessingStore = defineStore("processing", () => {
       if (d.phase === "error") {
         try {
           evtSource.close();
-        } catch {}
+        } catch { }
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
@@ -411,7 +425,7 @@ export const useProcessingStore = defineStore("processing", () => {
     evtSource.onerror = () => {
       try {
         evtSource.close();
-      } catch {}
+      } catch { }
       runtime.currentSource = null;
       runtime.currentToken = null;
       ui.downloading = false;
@@ -441,7 +455,7 @@ export const useProcessingStore = defineStore("processing", () => {
     if (runtime.currentSource) {
       try {
         runtime.currentSource.close();
-      } catch {}
+      } catch { }
       runtime.currentSource = null;
     }
     const evtSource = new EventSource(
@@ -457,7 +471,7 @@ export const useProcessingStore = defineStore("processing", () => {
       } catch {
         try {
           evtSource.close();
-        } catch {}
+        } catch { }
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
@@ -467,10 +481,15 @@ export const useProcessingStore = defineStore("processing", () => {
         toast.show("Invalid server response", "error");
         return;
       }
+      if (d.phase === "ready") {
+        progress.label = "Connected";
+        progress.text = d.message;
+        return;
+      }
       if (d.phase === "done") {
         try {
           evtSource.close();
-        } catch {}
+        } catch { }
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
@@ -512,7 +531,7 @@ export const useProcessingStore = defineStore("processing", () => {
       if (d.phase === "error") {
         try {
           evtSource.close();
-        } catch {}
+        } catch { }
         runtime.currentSource = null;
         runtime.currentToken = null;
         ui.downloading = false;
@@ -543,7 +562,7 @@ export const useProcessingStore = defineStore("processing", () => {
     evtSource.onerror = () => {
       try {
         evtSource.close();
-      } catch {}
+      } catch { }
       runtime.currentSource = null;
       runtime.currentToken = null;
       ui.downloading = false;
@@ -556,7 +575,7 @@ export const useProcessingStore = defineStore("processing", () => {
     if (runtime.currentSource) {
       try {
         runtime.currentSource.close();
-      } catch {}
+      } catch { }
       runtime.currentSource = null;
     }
     ui.downloading = false;
@@ -576,7 +595,7 @@ export const useProcessingStore = defineStore("processing", () => {
           method: "POST",
           body: runtime.currentToken,
         });
-      } catch {}
+      } catch { }
       runtime.currentToken = null;
     }
     const toast = useToastStore();
@@ -584,7 +603,7 @@ export const useProcessingStore = defineStore("processing", () => {
     if (runtime.processingToastId !== null) {
       try {
         toast.dismiss(runtime.processingToastId);
-      } catch {}
+      } catch { }
       runtime.processingToastId = null;
     }
     toast.show("Processing canceled", "warning");
