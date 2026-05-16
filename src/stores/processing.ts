@@ -423,6 +423,14 @@ export const useProcessingStore = defineStore("processing", () => {
       progress.fail = totalFail;
     };
     evtSource.onerror = () => {
+      const readyState = evtSource.readyState;
+      const readyStateMsg = 
+        readyState === EventSource.CONNECTING ? "CONNECTING" :
+        readyState === EventSource.OPEN ? "OPEN" :
+        readyState === EventSource.CLOSED ? "CLOSED" : `UNKNOWN(${readyState})`;
+      
+      console.error(`[SSE Error] ReadyState: ${readyStateMsg}`);
+      
       try {
         evtSource.close();
       } catch { }
@@ -430,7 +438,7 @@ export const useProcessingStore = defineStore("processing", () => {
       runtime.currentToken = null;
       ui.downloading = false;
       progress.label = "Connection lost";
-      toast.show("Connection lost", "error");
+      toast.show("Connection lost (HTTP/2 error)", "error");
     };
   }
 
