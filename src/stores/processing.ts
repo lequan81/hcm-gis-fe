@@ -424,13 +424,13 @@ export const useProcessingStore = defineStore("processing", () => {
     };
     evtSource.onerror = () => {
       const readyState = evtSource.readyState;
-      const readyStateMsg = 
+      const readyStateMsg =
         readyState === EventSource.CONNECTING ? "CONNECTING" :
-        readyState === EventSource.OPEN ? "OPEN" :
-        readyState === EventSource.CLOSED ? "CLOSED" : `UNKNOWN(${readyState})`;
-      
+          readyState === EventSource.OPEN ? "OPEN" :
+            readyState === EventSource.CLOSED ? "CLOSED" : `UNKNOWN(${readyState})`;
+
       console.error(`[SSE Error] ReadyState: ${readyStateMsg}`);
-      
+
       try {
         evtSource.close();
       } catch { }
