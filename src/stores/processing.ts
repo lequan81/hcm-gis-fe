@@ -182,7 +182,7 @@ export const useProcessingStore = defineStore("processing", () => {
       console.log(`[WATCH] completedFiles.length changed: ${oldLen} → ${newLen}`, data.completedFiles);
     }
   );
-  
+
   // Watch state changes that affect ZIP button visibility
   watch(
     () => ({
@@ -707,7 +707,7 @@ export const useProcessingStore = defineStore("processing", () => {
     data,
     ui,
     progress,
-    
+
     // Expose individual properties using toRef to maintain reactivity
     loading: toRef(ui, "loading"),
     connectionError: toRef(ui, "connectionError"),
@@ -715,19 +715,19 @@ export const useProcessingStore = defineStore("processing", () => {
     downloadsReady: toRef(ui, "downloadsReady"),
     preparingDownloads: toRef(ui, "preparingDownloads"),
     lastGeojson: toRef(ui, "lastGeojson"),
-    
+
     // Array references
     selected: toRef(data, "selected"),
     districts: toRef(data, "districts"),
     completedFiles: toRef(data, "completedFiles"),
-    
+
     // Computed properties for derived values
     progressPct: computed(() => progress.pct),
     progressLabel: computed(() => progress.label),
     progressText: computed(() => progress.text),
     progressOk: computed(() => progress.ok),
     progressFail: computed(() => progress.fail),
-    
+
     // Methods
     fetchDistricts,
     toggle,

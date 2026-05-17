@@ -8,21 +8,33 @@ const apiBase = import.meta.env.VITE_API_BASE_URL || "/hcm-gis";
 const downloadsReady = computed(() => store.downloadsReady);
 const hasCompletedFiles = computed(() => store.completedFiles.length > 0);
 const showProgressCard = computed(
-  () => store.downloading || store.progressPct === 100 || hasCompletedFiles.value,
+  () =>
+    store.downloading || store.progressPct === 100 || hasCompletedFiles.value,
 );
 
 // Watch for changes to debug reactivity
-watch(() => store.completedFiles.length, (newLen) => {
-  console.log(`[ProcessingProgress] completedFiles.length updated: ${newLen}`);
-});
+watch(
+  () => store.completedFiles.length,
+  (newLen) => {
+    console.log(
+      `[ProcessingProgress] completedFiles.length updated: ${newLen}`,
+    );
+  },
+);
 
-watch(() => store.progressPct, (newPct) => {
-  console.log(`[ProcessingProgress] progressPct updated: ${newPct}`);
-});
+watch(
+  () => store.progressPct,
+  (newPct) => {
+    console.log(`[ProcessingProgress] progressPct updated: ${newPct}`);
+  },
+);
 
-watch(() => store.downloadsReady, (newReady) => {
-  console.log(`[ProcessingProgress] downloadsReady updated: ${newReady}`);
-});
+watch(
+  () => store.downloadsReady,
+  (newReady) => {
+    console.log(`[ProcessingProgress] downloadsReady updated: ${newReady}`);
+  },
+);
 
 function onCancel() {
   try {
@@ -41,7 +53,9 @@ const showZip = computed(() => {
   const sseComplete = !store.downloading && store.progressPct === 100;
   const bundleReady = store.downloadsReady;
   const show = hasMultipleFiles && (sseComplete || bundleReady);
-  console.debug(`[showZip] files=${store.completedFiles.length}, sseComplete=${sseComplete}, bundleReady=${bundleReady}, show=${show}`);
+  console.debug(
+    `[showZip] files=${store.completedFiles.length}, sseComplete=${sseComplete}, bundleReady=${bundleReady}, show=${show}`,
+  );
   return show;
 });
 
@@ -218,7 +232,9 @@ const zipUrl = computed(() => {
           </svg>
           {{ i18n.t.btn_download_zip || "Download All as ZIP" }}
         </a>
-        <p v-else class="text-xs text-text-dim italic">Preparing ZIP bundle...</p>
+        <p v-else class="text-xs text-text-dim italic">
+          Preparing ZIP bundle...
+        </p>
         <p class="text-xs text-text-dim mt-2">
           {{ store.completedFiles.length }} file{{
             store.completedFiles.length !== 1 ? "s" : ""
