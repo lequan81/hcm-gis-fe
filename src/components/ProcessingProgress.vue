@@ -1,11 +1,28 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import { useProcessingStore } from "../stores/processing";
 import { useI18n } from "../i18n";
 const store = useProcessingStore();
 const i18n = useI18n();
 const apiBase = import.meta.env.VITE_API_BASE_URL || "/hcm-gis";
 const downloadsReady = computed(() => store.downloadsReady);
+const hasCompletedFiles = computed(() => store.completedFiles.length > 0);
+const showProgressCard = computed(
+  () => store.downloading || store.progressPct === 100 || hasCompletedFiles.value,
+);
+
+// Watch for changes to debug reactivity
+watch(() => store.completedFiles.length, (newLen) => {
+  console.log(`[ProcessingProgress] completedFiles.length updated: ${newLen}`);
+});
+
+watch(() => store.progressPct, (newPct) => {
+  console.log(`[ProcessingProgress] progressPct updated: ${newPct}`);
+});
+
+watch(() => store.downloadsReady, (newReady) => {
+  console.log(`[ProcessingProgress] downloadsReady updated: ${newReady}`);
+});
 
 function onCancel() {
   try {
@@ -15,13 +32,18 @@ function onCancel() {
   }
 }
 
-const showZip = computed(
-  () =>
-    !store.downloading &&
-    store.progressPct === 100 &&
-    store.completedFiles.length > 0 &&
-    (store.completedFiles.length > 1 || store.lastGeojson),
-);
+// ZIP button shows when:
+// 1. SSE completed (progressPct === 100 && !downloading)
+// 2. OR bundle was prepared (downloadsReady === true)
+// 3. AND there are 2+ files to bundle
+const showZip = computed(() => {
+  const hasMultipleFiles = store.completedFiles.length > 1;
+  const sseComplete = !store.downloading && store.progressPct === 100;
+  const bundleReady = store.downloadsReady;
+  const show = hasMultipleFiles && (sseComplete || bundleReady);
+  console.debug(`[showZip] files=${store.completedFiles.length}, sseComplete=${sseComplete}, bundleReady=${bundleReady}, show=${show}`);
+  return show;
+});
 
 const zipUrl = computed(() => {
   const ids = store.completedFiles.map((f) => f.id).join(",");
@@ -30,7 +52,7 @@ const zipUrl = computed(() => {
 </script>
 
 <template>
-  <div v-if="store.downloading || store.progressPct === 100" class="mb-8">
+  <div v-if="showProgressCard" class="mb-8">
     <div class="border border-border-default bg-bg-surface p-6">
       <div
         class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-3"
@@ -85,7 +107,7 @@ const zipUrl = computed(() => {
       </p>
 
       <!-- Completed file download links -->
-      <div v-if="store.completedFiles.length > 0" class="mt-6 space-y-2">
+      <div v-if="hasCompletedFiles" class="mt-6 space-y-2">
         <p class="text-xs font-medium text-text-dim uppercase tracking-widest">
           {{ i18n.t.progress_completed_files }}
         </p>
@@ -104,52 +126,47 @@ const zipUrl = computed(() => {
             >
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <template v-if="downloadsReady">
-              <!-- MBTiles download button -->
-              <a
-                :href="`${apiBase}/api/files/${f.id}`"
-                class="inline-flex items-center gap-1.5 border border-accent-teal/40 bg-accent-teal/15 hover:bg-accent-teal/25 px-3 py-1.5 text-accent-teal text-xs font-medium rounded transition-colors active:scale-95"
-              >
-                <svg
-                  class="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
-                {{ i18n.t.btn_download }} (.mbtiles)
-              </a>
-              <!-- GeoJSON download button -->
-              <a
-                v-if="store.lastGeojson"
-                :href="`${apiBase}/api/files/${f.id}/geojson`"
-                class="inline-flex items-center gap-1.5 border border-accent-amber/40 bg-accent-amber/15 hover:bg-accent-amber/25 px-3 py-1.5 text-accent-amber text-xs font-medium rounded transition-colors active:scale-95"
-              >
-                <svg
-                  class="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
-                {{ i18n.t.btn_download }} (.geojson)
-              </a>
-            </template>
-            <span v-else class="text-xs text-text-dim italic"
-              >Preparing downloads...</span
+            <!-- MBTiles download button -->
+            <a
+              :href="`${apiBase}/api/files/${f.id}`"
+              class="inline-flex items-center gap-1.5 border border-accent-teal/40 bg-accent-teal/15 hover:bg-accent-teal/25 px-3 py-1.5 text-accent-teal text-xs font-medium rounded transition-colors active:scale-95"
             >
+              <svg
+                class="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              {{ i18n.t.btn_download }} (.mbtiles)
+            </a>
+            <!-- GeoJSON download button -->
+            <a
+              v-if="store.lastGeojson"
+              :href="`${apiBase}/api/files/${f.id}/geojson`"
+              class="inline-flex items-center gap-1.5 border border-accent-amber/40 bg-accent-amber/15 hover:bg-accent-amber/25 px-3 py-1.5 text-accent-amber text-xs font-medium rounded transition-colors active:scale-95"
+            >
+              <svg
+                class="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              {{ i18n.t.btn_download }} (.geojson)
+            </a>
             <!-- Remove -->
             <button
               @click="store.removeFile(f.id)"
@@ -175,16 +192,14 @@ const zipUrl = computed(() => {
       </div>
 
       <!-- Download ZIP bundle -->
-      <div
-        v-if="showZip && downloadsReady"
-        class="mt-6 pt-4 border-t border-border-default"
-      >
+      <div v-if="showZip" class="mt-6 pt-4 border-t border-border-default">
         <p
           class="text-xs font-medium text-text-dim uppercase tracking-widest mb-3"
         >
           Bundle Download
         </p>
         <a
+          v-if="downloadsReady"
           :href="zipUrl"
           class="inline-flex items-center gap-2 border border-accent-sky/50 bg-accent-sky/20 hover:bg-accent-sky/30 px-4 py-2 text-sm font-semibold text-accent-sky rounded transition-colors active:scale-95"
         >
@@ -203,6 +218,7 @@ const zipUrl = computed(() => {
           </svg>
           {{ i18n.t.btn_download_zip || "Download All as ZIP" }}
         </a>
+        <p v-else class="text-xs text-text-dim italic">Preparing ZIP bundle...</p>
         <p class="text-xs text-text-dim mt-2">
           {{ store.completedFiles.length }} file{{
             store.completedFiles.length !== 1 ? "s" : ""

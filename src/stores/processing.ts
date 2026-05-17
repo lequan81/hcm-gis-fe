@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { reactive } from "vue";
+import { reactive, toRef, computed, watch } from "vue";
 import { useToastStore, playNotification } from "./toast";
 
 const API = import.meta.env.VITE_API_BASE_URL || "/hcm-gis";
@@ -13,6 +13,13 @@ function isJsonObject(value: JsonValue): value is JsonObject {
 
 function isNumber(value: JsonValue): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function isNumericLike(value: JsonValue): value is number | string {
+  return (
+    (typeof value === "number" && Number.isFinite(value)) ||
+    (typeof value === "string" && value.trim().length > 0)
+  );
 }
 
 function isStringArray(value: JsonValue): value is string[] {
@@ -76,8 +83,8 @@ type DoneDistrictMessage = {
   district: string;
   id: string;
   tileCount: number;
-  sizeMB: string;
-  elapsed: string;
+  sizeMB: string | number;
+  elapsed: string | number;
 };
 
 type ReadyMessage = {
@@ -114,8 +121,8 @@ function isSseMessage(value: JsonValue): value is SseMessage {
       typeof value.id === "string" &&
       typeof value.district === "string" &&
       isNumber(value.tileCount) &&
-      typeof value.sizeMB === "string" &&
-      typeof value.elapsed === "string"
+      isNumericLike(value.sizeMB) &&
+      isNumericLike(value.elapsed)
     );
   }
   return (
@@ -167,6 +174,30 @@ export const useProcessingStore = defineStore("processing", () => {
     processingToastId: null as number | null,
   });
 
+  // ── Debug Watchers ──
+  // Watch completedFiles array changes
+  watch(
+    () => data.completedFiles.length,
+    (newLen, oldLen) => {
+      console.log(`[WATCH] completedFiles.length changed: ${oldLen} → ${newLen}`, data.completedFiles);
+    }
+  );
+  
+  // Watch state changes that affect ZIP button visibility
+  watch(
+    () => ({
+      downloading: ui.downloading,
+      progressPct: progress.pct,
+      fileCount: data.completedFiles.length,
+      downloadsReady: ui.downloadsReady,
+    }),
+    (newState, oldState) => {
+      if (newState.downloading !== oldState.downloading || newState.progressPct !== oldState.progressPct) {
+        console.log("[WATCH] ZIP button state:", { ...newState });
+      }
+    }
+  );
+
   type PrepareResponse = {
     status: "ready" | "building";
     cacheKey?: string;
@@ -183,10 +214,12 @@ export const useProcessingStore = defineStore("processing", () => {
 
   async function prepareBundle(ids: string[]) {
     if (ids.length === 0) {
+      console.log("No files to bundle");
       ui.downloadsReady = true;
       ui.preparingDownloads = false;
       return;
     }
+    console.log(`[BUNDLE] Preparing bundle for ${ids.length} file(s):`, ids);
     ui.preparingDownloads = true;
     ui.downloadsReady = false;
     const toast = useToastStore();
@@ -200,12 +233,19 @@ export const useProcessingStore = defineStore("processing", () => {
         if (!isPrepareResponse(resp))
           throw new Error("Invalid prepare response");
         if (resp.status === "ready") {
+          console.log("[BUNDLE] ✓ Bundle ready! Setting downloadsReady = true");
+          ui.downloadsReady = true;
+          ui.preparingDownloads = false;
+          console.log("[BUNDLE] State after ready:", { downloading: ui.downloading, progressPct: progress.pct, downloadsReady: ui.downloadsReady });
           return;
         }
+        console.log(`[BUNDLE] Preparing... (attempt ${attempt + 1}/20, status: ${resp.status})`);
         await new Promise((r) => setTimeout(r, 1500));
       }
       throw new Error("Prepare timeout");
-    } catch {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error("[BUNDLE] Prepare failed:", errMsg);
       toast.show(
         "Failed to prepare downloads. You can still download directly.",
         "warning",
@@ -338,6 +378,22 @@ export const useProcessingStore = defineStore("processing", () => {
         runtime.currentToken = null;
         ui.downloading = false;
         progress.pct = 100;
+        console.log(`[SSE-DONE] Received - completedFiles.length: ${data.completedFiles.length}`, { files: data.completedFiles });
+        if (data.completedFiles.length === 0) {
+          progress.label = "No files generated";
+          progress.text = "No tiles were downloaded for this selection.";
+          ui.downloadsReady = false;
+          if (runtime.processingToastId !== null) {
+            toast.update(
+              runtime.processingToastId,
+              "Completed with no downloadable file",
+              "warning",
+            );
+            runtime.processingToastId = null;
+          }
+          playNotification();
+          return;
+        }
         // Show aggregate stats from completed files
         const totalTiles = data.completedFiles.reduce(
           (s, f) => s + f.tileCount,
@@ -349,9 +405,11 @@ export const useProcessingStore = defineStore("processing", () => {
         const doneText = `${data.completedFiles.length} district(s) · ${totalTiles} tiles · ${totalSize} MB`;
         progress.label = "Preparing downloads...";
         progress.text = "Building ZIP cache...";
+        console.log(`[done] SSE Complete - files ready for bundle:`, data.completedFiles.map(f => ({ district: f.district, id: f.id })));
         await prepareBundle(data.completedFiles.map((f) => f.id));
         progress.label = "Complete!";
         progress.text = doneText;
+        console.log(`[done] Bundle prepared - state:`, { downloading: ui.downloading, progressPct: progress.pct, downloadsReady: ui.downloadsReady, fileCount: data.completedFiles.length });
         if (runtime.processingToastId !== null) {
           toast.update(
             runtime.processingToastId,
@@ -364,13 +422,19 @@ export const useProcessingStore = defineStore("processing", () => {
         return;
       }
       if (d.phase === "done_district") {
-        data.completedFiles.push({
+        console.log(`[SSE] done_district received:`, { district: d.district, id: d.id, tileCount: d.tileCount, sizeMB: d.sizeMB, elapsed: d.elapsed });
+        // Create the file object with explicit type
+        const newFile: CompletedFile = {
           id: d.id,
           district: d.district,
           tileCount: d.tileCount,
-          sizeMB: d.sizeMB,
-          elapsed: d.elapsed,
-        });
+          sizeMB: String(d.sizeMB),
+          elapsed: String(d.elapsed),
+        };
+        // Use array spread to trigger Vue reactivity
+        data.completedFiles = [...data.completedFiles, newFile];
+        console.log(`[REACTIVE] Array reassigned, new length:`, data.completedFiles.length);
+        console.log(`[STATE] Current completedFiles:`, data.completedFiles.map(f => ({ district: f.district, id: f.id })));
         return;
       }
       if (d.phase === "error") {
@@ -437,6 +501,12 @@ export const useProcessingStore = defineStore("processing", () => {
       runtime.currentSource = null;
       runtime.currentToken = null;
       ui.downloading = false;
+      if (data.completedFiles.length > 0) {
+        progress.label = "Complete!";
+        progress.text = `${data.completedFiles.length} file(s) ready`;
+        ui.downloadsReady = true;
+        return;
+      }
       progress.label = "Connection lost";
       toast.show("Connection lost (HTTP/2 error)", "error");
     };
@@ -502,6 +572,21 @@ export const useProcessingStore = defineStore("processing", () => {
         runtime.currentToken = null;
         ui.downloading = false;
         progress.pct = 100;
+        if (data.completedFiles.length === 0) {
+          progress.label = "No files generated";
+          progress.text = "No tiles were downloaded for this selection.";
+          ui.downloadsReady = false;
+          if (runtime.processingToastId !== null) {
+            toast.update(
+              runtime.processingToastId,
+              "Completed with no downloadable file",
+              "warning",
+            );
+            runtime.processingToastId = null;
+          }
+          playNotification();
+          return;
+        }
         const totalTiles = data.completedFiles.reduce(
           (s, f) => s + f.tileCount,
           0,
@@ -531,8 +616,8 @@ export const useProcessingStore = defineStore("processing", () => {
           id: d.id,
           district: d.district,
           tileCount: d.tileCount,
-          sizeMB: d.sizeMB,
-          elapsed: d.elapsed,
+          sizeMB: String(d.sizeMB),
+          elapsed: String(d.elapsed),
         });
         return;
       }
@@ -618,23 +703,32 @@ export const useProcessingStore = defineStore("processing", () => {
   }
 
   return {
+    // Expose full reactive objects for direct access
     data,
     ui,
     progress,
-    loading: ui.loading,
-    connectionError: ui.connectionError,
-    downloading: ui.downloading,
-    downloadsReady: ui.downloadsReady,
-    preparingDownloads: ui.preparingDownloads,
-    selected: data.selected,
-    districts: data.districts,
-    completedFiles: data.completedFiles,
-    progressPct: progress.pct,
-    progressLabel: progress.label,
-    progressText: progress.text,
-    progressOk: progress.ok,
-    progressFail: progress.fail,
-    lastGeojson: ui.lastGeojson,
+    
+    // Expose individual properties using toRef to maintain reactivity
+    loading: toRef(ui, "loading"),
+    connectionError: toRef(ui, "connectionError"),
+    downloading: toRef(ui, "downloading"),
+    downloadsReady: toRef(ui, "downloadsReady"),
+    preparingDownloads: toRef(ui, "preparingDownloads"),
+    lastGeojson: toRef(ui, "lastGeojson"),
+    
+    // Array references
+    selected: toRef(data, "selected"),
+    districts: toRef(data, "districts"),
+    completedFiles: toRef(data, "completedFiles"),
+    
+    // Computed properties for derived values
+    progressPct: computed(() => progress.pct),
+    progressLabel: computed(() => progress.label),
+    progressText: computed(() => progress.text),
+    progressOk: computed(() => progress.ok),
+    progressFail: computed(() => progress.fail),
+    
+    // Methods
     fetchDistricts,
     toggle,
     selectAll,
